@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<link rel="icon" href="icon.ico" type="image/x-icon" />
+        <meta charset="UTF-8">
+        <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui" name="viewport">
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-title" content="Reminder">
+        <title>Reminder</title>
+        <meta name="theme-color" content="#000">
+        <meta name="msapplication-navbutton-color" content="#000">
+        <meta name="apple-mobile-web-app-status-bar-style" content="#000">
+		<style>
+			@keyframes trailer {
+				from {
+					transform: translate(-50%, -50%) rotate(0deg);
+				}
+				
+				to {
+					transform: translate(-50%, -50%) rotate(360deg);
+				}
+			}
+			* { -webkit-appearance: none; }
+			body, html {
+				overflow: hidden;
+				background-image: url('background.jpg');
+				background-size: cover;
+				background-attachment: fixed;
+				margin: 0;
+				padding: 0;
+				height: 100%;
+				width: 100%;
+				font-family: sans;
+			}
+
+			input[type=checkbox]:disabled {
+				font-size: 1em;
+				border: .125em solid #000;
+				background: #FFF;
+				cursor: pointer;
+				height: 1.2em;
+				width: 1.2em;
+				box-shadow: inset 0 0 0 .125em #FFF;
+				vertical-align: text-top;
+				margin: 0 .3em;
+				padding: 0;
+				transition: background-color .2s, box-shadow .2s;
+				border-radius: .1875em;
+			}
+			input[type=checkbox]:checked {
+				background: #367bf0;
+			}
+			#radar {
+				margin: 0 20px;
+				height: 75vw;
+				width: 75vw;
+				background-image: url("radar.svg");
+				background-size: 100%;
+				margin-top: -33.5vw;
+				position: relative;
+				border-radius: 75vw;
+				box-shadow: 0 0 20px black;
+				overflow: hidden;
+			}
+			#trailer {
+				transform-origin: top center;
+				position: absolute;
+				top: 63%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				background-image: linear-gradient(60deg, rgba(255, 255, 255, 0.6), transparent 60%);
+				width: 40vw;
+				height: 20vw;
+				border-radius: 0 0 20vw 20vw;
+				z-index: 1;
+				animation: trailer linear 2s infinite;
+			}
+			.beacon {
+				background: url("beacon.svg");
+				background-size: cover;
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				height: 30px;
+				width: 30px;
+				transition: top .6s linear;
+				z-index: 2;
+				background-color: rgba(0, 0, 0, .3);
+				border-radius: 100%;
+				box-shadow: 0 0 10px rgba(255, 255, 255, .3);
+				background-repeat: no-repeat;
+				border: 10px solid transparent;
+			}
+			#weather {
+			    position: absolute;
+				right: 0;
+				top: 0;
+				width: 220px;
+				transform: scale(.8);
+				transform-origin: top right;
+				height: 200vh;
+				background: #215879;
+				box-shadow: 0 0 20px black;
+			}
+			footer {
+				width: 100%;
+				height: 40px;
+				position: absolute;
+				bottom: 0;
+				background: #FFF;
+				line-height: 40px;
+				box-shadow: inset 0 10px 4px -10px #000;
+				text-align: center;
+			}
+			footer label { margin: 0 10px; }
+			footer img {
+				height: 20px;
+				width: 20px;
+				margin-bottom: -3px;
+			}
+			intput[type=checkbox]:checked + span { }
+			
+		</style>
+	</head>
+	<body>
+		<div id="radar">
+			<div id="trailer"></div>
+		</div>
+		<div id="weather">
+			<a class="weatherwidget-io" href="https://forecast7.com/es/40d42n3d70/madrid/" data-label_1="MADRID" data-label_2="Tiempo" data-theme="original" >MADRID Tiempo</a>
+		</div>
+		<footer>
+			<label>
+				<input type="checkbox" disabled="true" id="Cartera">
+				<span>Cartera</span>
+				<img src="beacon-1.svg">
+			</label>
+			<label>
+				<input type="checkbox" disabled="true" id="Llaves">
+				<span>Llaves</span>
+				<img src="beacon-2.svg">
+			</label>
+			<label>
+				<input type="checkbox" disabled="true" id="Movil">
+				<span>Movil</span>
+				<img src="beacon-3.svg">
+			</label>
+		</footer>
+
+		<script>
+			!function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='https://weatherwidget.io/js/widget.min.js';fjs.parentNode.insertBefore(js,fjs);}}(document,'script','weatherwidget-io-js');
+		</script>
+		<script>
+			let colorPosition = 0;
+			let beaconNumber = 1;
+			const $ = e => { return document.querySelector(e) }
+
+			let connection = new WebSocket('ws://192.168.1.62:1337')
+			let beaconPrototype = document.createElement('div')
+			beaconPrototype.className = 'beacon'
+			connection.onerror = e => { console.log('Error en la conexión') }
+			connection.onmessage = ({data}) => {
+				let beaconData = JSON.parse(data)
+				let beaconElement = $(`.beacon[data-id='${beaconData.Nombre}']`)
+				if (beaconElement !== null) {
+					beaconElement.style.top = `${50 + parseInt(beaconData.RSSI)}%`
+					$(`#${beaconData.Nombre}`).checked = beaconData.Cerca
+				} else {
+					let newBeacon = document.createElement('div')
+					newBeacon.className = 'beacon'
+					newBeacon.dataset.id = beaconData.Nombre
+					$('#radar').appendChild(newBeacon)
+					newBeacon.style.top = '120%'
+					newBeacon.style.backgroundImage = `url('beacon-${beaconNumber}.svg')`
+					beaconNumber++
+				}
+			}
+		</script>
+	</body>
+</html>
